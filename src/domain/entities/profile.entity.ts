@@ -9,6 +9,8 @@ export interface Profile {
   polarCustomerId: string | null;
   polarSubscriptionId: string | null;
   subscriptionStatus: string | null;
+  currentPeriodEnd: Date | null;
+  cancelAtPeriodEnd: boolean;
   sessionCountThisMonth: number;
   sessionResetAt: Date;
   createdAt: Date;

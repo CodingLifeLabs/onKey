@@ -52,6 +52,34 @@ export async function POST(req: Request) {
       break;
     }
 
+    case 'user.updated': {
+      const { id, email_addresses, first_name, last_name } = evt.data;
+      const email = (email_addresses as Array<{ email_address: string }>)[0]
+        ?.email_address;
+      const fullName = [first_name, last_name].filter(Boolean).join(' ');
+
+      if (!id) {
+        return new Response('Missing user id', { status: 400 });
+      }
+
+      const updateData: Record<string, string> = {};
+      if (email) updateData.email = email;
+      if (fullName) updateData.full_name = fullName;
+
+      if (Object.keys(updateData).length > 0) {
+        const { error } = await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('clerk_user_id', id as string);
+
+        if (error) {
+          console.error('Failed to update profile:', error);
+          return new Response('Failed to update profile', { status: 500 });
+        }
+      }
+      break;
+    }
+
     case 'user.deleted': {
       const { id } = evt.data;
       if (!id) {

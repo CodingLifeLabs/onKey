@@ -11,6 +11,7 @@ interface BillingContentProps {
   subscriptionStatus: string | null;
   sessionCount: number;
   hasSubscription: boolean;
+  currentPeriodEnd: Date | null;
   proProductId: string | undefined;
   unlimitedProductId: string | undefined;
 }
@@ -42,11 +43,21 @@ const PLANS = [
   },
 ] as const;
 
+function formatRemainingDays(endDate: Date): string {
+  const now = new Date();
+  const diffMs = endDate.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) return '곧 만료';
+  if (diffDays === 1) return '내일 만료';
+  return `${diffDays}일 후 만료`;
+}
+
 export function BillingContent({
   plan,
   subscriptionStatus,
   sessionCount,
   hasSubscription,
+  currentPeriodEnd,
   proProductId,
   unlimitedProductId,
 }: BillingContentProps) {
@@ -54,6 +65,7 @@ export function BillingContent({
   const isPastDue = subscriptionStatus === 'past_due';
   const isCanceled = subscriptionStatus === 'canceled';
   const isPaidPlan = plan === 'pro' || plan === 'enterprise';
+  const isActiveSubscription = subscriptionStatus === 'active' && hasSubscription;
 
   const getProductId = (planId: string) => {
     if (planId === 'pro') return proProductId;
@@ -80,7 +92,19 @@ export function BillingContent({
         </div>
       )}
 
-      {isCanceled && isPaidPlan && (
+      {isCanceled && isPaidPlan && currentPeriodEnd && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-amber-800">구독 해지 예정</p>
+            <p className="text-sm text-amber-600">
+              {formatRemainingDays(currentPeriodEnd)} 후 Free 플랜으로 전환됩니다. 해지를 철회하려면 결제 관리에서 변경할 수 있습니다.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {isCanceled && isPaidPlan && !currentPeriodEnd && (
         <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
           <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
           <div>
@@ -105,6 +129,9 @@ export function BillingContent({
           const isCurrent = plan === p.id && !isTrialing;
           const canUpgrade = !isCurrent && !isTrialing && p.id !== 'starter';
           const showPortal = (plan === p.id || isTrialing) && isPaidPlan && p.id === plan;
+
+          // 이미 active 구독 중이면 checkout 대신 portal 유도
+          const upgradeTarget = canUpgrade && isActiveSubscription;
 
           return (
             <Card
@@ -138,13 +165,22 @@ export function BillingContent({
                     </li>
                   ))}
                 </ul>
-                {canUpgrade && getProductId(p.id) && (
+                {canUpgrade && getProductId(p.id) && !upgradeTarget && (
                   <a
                     href={getCheckoutUrl(p.id)}
                     className="w-full inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4"
                   >
                     <Zap className="h-4 w-4" />
                     업그레이드
+                  </a>
+                )}
+                {upgradeTarget && (
+                  <a
+                    href="/api/portal"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4"
+                  >
+                    <Zap className="h-4 w-4" />
+                    플랜 변경
                   </a>
                 )}
                 {showPortal && hasSubscription && (

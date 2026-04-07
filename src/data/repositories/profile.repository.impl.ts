@@ -57,6 +57,8 @@ export class ProfileRepository implements IProfileRepository {
     plan: PlanType;
     polarSubscriptionId?: string;
     subscriptionStatus?: string;
+    currentPeriodEnd?: Date | null;
+    cancelAtPeriodEnd?: boolean;
   }): Promise<Profile> {
     const supabase = createServiceClient();
     const updateData: Record<string, unknown> = { plan: data.plan };
@@ -65,6 +67,12 @@ export class ProfileRepository implements IProfileRepository {
     }
     if (data.subscriptionStatus !== undefined) {
       updateData.subscription_status = data.subscriptionStatus;
+    }
+    if (data.currentPeriodEnd !== undefined) {
+      updateData.current_period_end = data.currentPeriodEnd?.toISOString() ?? null;
+    }
+    if (data.cancelAtPeriodEnd !== undefined) {
+      updateData.cancel_at_period_end = data.cancelAtPeriodEnd;
     }
     const { data: row } = await supabase
       .from('profiles')

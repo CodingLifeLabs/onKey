@@ -7,6 +7,7 @@ export default async function BillingPage() {
   const plan = owner?.profile.plan ?? 'starter';
   const subscriptionStatus = owner?.profile.subscriptionStatus ?? null;
   const sessionCount = owner?.profile.sessionCountThisMonth ?? 0;
+  const currentPeriodEnd = owner?.profile.currentPeriodEnd ?? null;
 
   return (
     <>
@@ -17,6 +18,7 @@ export default async function BillingPage() {
           subscriptionStatus={subscriptionStatus}
           sessionCount={sessionCount}
           hasSubscription={!!owner?.profile.polarSubscriptionId}
+          currentPeriodEnd={currentPeriodEnd}
           proProductId={process.env.NEXT_PUBLIC_POLAR_PRO_PRODUCT_ID}
           unlimitedProductId={process.env.NEXT_PUBLIC_POLAR_UNLIMITED_PRODUCT_ID}
         />

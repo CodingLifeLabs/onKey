@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-04-08 — Polar 구독 결제 플로우 수정
+- DB: profiles에 `current_period_end`, `cancel_at_period_end` 컬럼 추가 (마이그레이션 007)
+- Clerk 웹훅에 `user.updated` 핸들러 추가 (이메일/이름 변경 시 DB 동기화)
+- Polar checkout에 `externalCustomerId`, `customerEmail` 전달 (fake email 필터링)
+- 이미 active 구독 중이면 checkout 대신 Polar Portal로 리다이렉트
+- Polar 웹훅 findProfile에 metadata(clerkUserId) 기반 3차 fallback 조회 추가
+- Polar 웹훅에서 `current_period_end`, `cancel_at_period_end` 저장
+- Billing UI에 취소 시 잔여 기간 일수 표시
+- Billing UI에 active 구독 중 "플랜 변경" 버튼 (Polar Portal 유도)
+
 ## 2026-04-07 — Feature 22: 신규 기능 (진행률 바, 만료 자동처리, 대량 삭제, 필수 블록 검증)
 - 입주자 페이지 진행률 프로그레스 바 추가 (열람/체크/서명 단계 시각화)
 - 세션 만료 자동 처리: Repository 조회 시 만료일 지난 세션 expired 자동 전환

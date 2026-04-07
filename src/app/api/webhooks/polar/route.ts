@@ -10,7 +10,11 @@ function mapProductIdToPlan(productId: string): 'starter' | 'pro' | 'enterprise'
   return 'starter';
 }
 
-async function findProfile(customerId: string, customerEmail?: string | null) {
+async function findProfile(
+  customerId: string,
+  customerEmail?: string | null,
+  metadata?: Record<string, unknown> | null,
+) {
   const supabase = createServiceClient();
 
   // 1. polar_customer_id로 조회
@@ -40,6 +44,24 @@ async function findProfile(customerId: string, customerEmail?: string | null) {
     }
   }
 
+  // 3. metadata의 clerkUserId로 fallback + polar_customer_id 저장
+  if (metadata?.clerkUserId) {
+    const { data: byClerkId } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('clerk_user_id', metadata.clerkUserId as string)
+      .single();
+
+    if (byClerkId) {
+      await supabase
+        .from('profiles')
+        .update({ polar_customer_id: customerId })
+        .eq('id', byClerkId.id);
+      console.log(`Linked polar_customer_id ${customerId} to profile ${byClerkId.id} via clerkUserId`);
+      return byClerkId;
+    }
+  }
+
   return null;
 }
 
@@ -49,8 +71,9 @@ export const POST = Webhooks({
     const data = payload.data;
     const plan = mapProductIdToPlan(data.productId);
     const customerEmail = (data.customer as { email?: string } | undefined)?.email ?? null;
+    const metadata = data.metadata as Record<string, unknown> | undefined | null;
 
-    const profile = await findProfile(data.customerId, customerEmail);
+    const profile = await findProfile(data.customerId, customerEmail, metadata);
     if (!profile) return;
 
     const supabase = createServiceClient();
@@ -58,8 +81,10 @@ export const POST = Webhooks({
       .from('profiles')
       .update({
         plan,
+        polar_customer_id: data.customerId,
         polar_subscription_id: data.id,
         subscription_status: data.status,
+        current_period_end: data.currentPeriodEnd ?? null,
       })
       .eq('id', profile.id);
 
@@ -70,8 +95,9 @@ export const POST = Webhooks({
     const data = payload.data;
     const plan = mapProductIdToPlan(data.productId);
     const customerEmail = (data.customer as { email?: string } | undefined)?.email ?? null;
+    const metadata = data.metadata as Record<string, unknown> | undefined | null;
 
-    const profile = await findProfile(data.customerId, customerEmail);
+    const profile = await findProfile(data.customerId, customerEmail, metadata);
     if (!profile) return;
 
     const supabase = createServiceClient();
@@ -79,8 +105,10 @@ export const POST = Webhooks({
       .from('profiles')
       .update({
         plan,
+        polar_customer_id: data.customerId,
         polar_subscription_id: data.id,
         subscription_status: data.status,
+        current_period_end: data.currentPeriodEnd ?? null,
       })
       .eq('id', profile.id);
 
@@ -91,8 +119,9 @@ export const POST = Webhooks({
     const data = payload.data;
     const plan = mapProductIdToPlan(data.productId);
     const customerEmail = (data.customer as { email?: string } | undefined)?.email ?? null;
+    const metadata = data.metadata as Record<string, unknown> | undefined | null;
 
-    const profile = await findProfile(data.customerId, customerEmail);
+    const profile = await findProfile(data.customerId, customerEmail, metadata);
     if (!profile) return;
 
     const supabase = createServiceClient();
@@ -100,8 +129,11 @@ export const POST = Webhooks({
       .from('profiles')
       .update({
         plan,
+        polar_customer_id: data.customerId,
         polar_subscription_id: data.id,
         subscription_status: 'active',
+        current_period_end: data.currentPeriodEnd ?? null,
+        cancel_at_period_end: false,
       })
       .eq('id', profile.id);
 
@@ -111,8 +143,9 @@ export const POST = Webhooks({
   onSubscriptionCanceled: async (payload) => {
     const data = payload.data;
     const customerEmail = (data.customer as { email?: string } | undefined)?.email ?? null;
+    const metadata = data.metadata as Record<string, unknown> | undefined | null;
 
-    const profile = await findProfile(data.customerId, customerEmail);
+    const profile = await findProfile(data.customerId, customerEmail, metadata);
     if (!profile) return;
 
     const supabase = createServiceClient();
@@ -120,14 +153,23 @@ export const POST = Webhooks({
       // 기간 종료까지 현재 플랜 유지
       await supabase
         .from('profiles')
-        .update({ subscription_status: 'canceled' })
+        .update({
+          subscription_status: 'canceled',
+          cancel_at_period_end: true,
+          current_period_end: data.currentPeriodEnd ?? null,
+        })
         .eq('id', profile.id);
       console.log(`subscription.canceled (end of period): profile ${profile.id}`);
     } else {
       // 즉시 다운그레이드
       await supabase
         .from('profiles')
-        .update({ plan: 'starter', subscription_status: 'canceled' })
+        .update({
+          plan: 'starter',
+          subscription_status: 'canceled',
+          cancel_at_period_end: false,
+          current_period_end: null,
+        })
         .eq('id', profile.id);
       console.log(`subscription.canceled (immediate): profile ${profile.id} → starter`);
     }
@@ -136,14 +178,20 @@ export const POST = Webhooks({
   onSubscriptionRevoked: async (payload) => {
     const data = payload.data;
     const customerEmail = (data.customer as { email?: string } | undefined)?.email ?? null;
+    const metadata = data.metadata as Record<string, unknown> | undefined | null;
 
-    const profile = await findProfile(data.customerId, customerEmail);
+    const profile = await findProfile(data.customerId, customerEmail, metadata);
     if (!profile) return;
 
     const supabase = createServiceClient();
     await supabase
       .from('profiles')
-      .update({ plan: 'starter', subscription_status: 'canceled' })
+      .update({
+        plan: 'starter',
+        subscription_status: 'canceled',
+        cancel_at_period_end: false,
+        current_period_end: null,
+      })
       .eq('id', profile.id);
 
     console.log(`subscription.revoked: profile ${profile.id} → starter`);
@@ -153,8 +201,9 @@ export const POST = Webhooks({
     const data = payload.data;
     const plan = mapProductIdToPlan(data.productId);
     const customerEmail = (data.customer as { email?: string } | undefined)?.email ?? null;
+    const metadata = data.metadata as Record<string, unknown> | undefined | null;
 
-    const profile = await findProfile(data.customerId, customerEmail);
+    const profile = await findProfile(data.customerId, customerEmail, metadata);
     if (!profile) return;
 
     const supabase = createServiceClient();
@@ -164,6 +213,8 @@ export const POST = Webhooks({
         plan,
         polar_subscription_id: data.id,
         subscription_status: 'active',
+        cancel_at_period_end: false,
+        current_period_end: data.currentPeriodEnd ?? null,
       })
       .eq('id', profile.id);
 

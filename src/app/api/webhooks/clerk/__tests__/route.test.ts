@@ -29,6 +29,9 @@ describe('Clerk Webhook Handler', () => {
     vi.clearAllMocks();
     mockFrom.mockReturnValue({
       insert: vi.fn().mockResolvedValue({ error: null }),
+      update: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      }),
       delete: vi.fn().mockReturnValue({
         eq: vi.fn().mockResolvedValue({ error: null }),
       }),
@@ -106,5 +109,47 @@ describe('Clerk Webhook Handler', () => {
 
     const res = await POST(req);
     expect(res.status).toBe(200);
+  });
+
+  it('user.updated 이벤트 시 profiles UPDATE 호출', async () => {
+    const { Webhook } = await import('svix');
+    const mockUpdate = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    });
+    const mockVerify = vi.fn().mockReturnValue({
+      type: 'user.updated',
+      data: {
+        id: 'user_upd123',
+        email_addresses: [{ email_address: 'updated@onkey.app' }],
+        first_name: '수정된',
+        last_name: '이름',
+      },
+    });
+    vi.mocked(Webhook).mockImplementation(
+      () =>
+        ({
+          verify: mockVerify,
+        }) as unknown as InstanceType<typeof Webhook>,
+    );
+
+    mockFrom.mockReturnValue({
+      update: mockUpdate,
+    });
+
+    const { POST } = await import('../route');
+    const req = new Request('http://localhost/api/webhooks/clerk', {
+      method: 'POST',
+      headers: {
+        'svix-id': 'svix_id_upd',
+        'svix-timestamp': '1234567890',
+        'svix-signature': 'svix_sig_upd',
+      },
+      body: JSON.stringify({ type: 'user.updated', data: {} }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(mockFrom).toHaveBeenCalledWith('profiles');
+    expect(mockUpdate).toHaveBeenCalled();
   });
 });

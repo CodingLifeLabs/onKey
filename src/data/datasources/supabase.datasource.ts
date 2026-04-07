@@ -16,6 +16,8 @@ export function mapProfileFromRow(row: Record<string, unknown>): Profile {
     polarCustomerId: (row.polar_customer_id as string) ?? null,
     polarSubscriptionId: (row.polar_subscription_id as string) ?? null,
     subscriptionStatus: (row.subscription_status as string) ?? null,
+    currentPeriodEnd: row.current_period_end ? new Date(row.current_period_end as string) : null,
+    cancelAtPeriodEnd: (row.cancel_at_period_end as boolean) ?? false,
     sessionCountThisMonth: (row.session_count_this_month as number) ?? 0,
     sessionResetAt: new Date(row.session_reset_at as string),
     createdAt: new Date(row.created_at as string),

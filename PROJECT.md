@@ -125,7 +125,7 @@ src/
 - Tailwind v4 사용 → v3와 설정 방식 상이 (CSS 기반)
 - 시스템 템플릿 owner_id를 NULL로 변경 (더미 UUID 대신)
 - RLS 정책: service_role로 우회 + 애플리케이션 레이어에서 owner_id 검증 (Clerk auth 사용으로 auth.jwt() 불가)
-- Clerk 웹훅: user.created → profiles INSERT, user.deleted → profiles DELETE
+- Clerk 웹훅: user.created → profiles INSERT, user.updated → profiles UPDATE, user.deleted → profiles DELETE (2026-04-08)
 - 웹훅 라우트에서 req.headers 직접 사용 (next/headers는 테스트 환경에서 동작 안 함)
 - 인증 페이지: (auth) 라우트 그룹 + [[...sign-in]] catch-all 패턴
 - shadcn/ui v4 Button에 `asChild` 없음 → Link로 Button 감싸는 패턴 사용

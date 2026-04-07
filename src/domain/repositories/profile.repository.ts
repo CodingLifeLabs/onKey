@@ -13,6 +13,8 @@ export interface IProfileRepository {
     plan: PlanType;
     polarSubscriptionId?: string;
     subscriptionStatus?: string;
+    currentPeriodEnd?: Date | null;
+    cancelAtPeriodEnd?: boolean;
   }): Promise<Profile>;
   incrementSessionCount(id: string): Promise<void>;
   resetMonthlySessionCount(id: string): Promise<void>;
