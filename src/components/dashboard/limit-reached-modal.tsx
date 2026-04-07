@@ -71,7 +71,7 @@ export function LimitReachedModal({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Pro 한도</span>
-              <span className="font-medium text-emerald-600">월 50개 세션</span>
+              <span className="font-medium text-emerald-600">월 20개 세션</span>
             </div>
           </div>
         </div>
