@@ -73,8 +73,9 @@ export function BillingContent({
   const isPastDue = subscriptionStatus === 'past_due';
   const isCanceled = subscriptionStatus === 'canceled';
   const isPaidPlan = plan === 'pro' || plan === 'enterprise';
-  const isActiveSubscription = subscriptionStatus === 'active' && hasSubscription;
-  const showSubscriptionInfo = isPaidPlan && hasSubscription;
+  const isActivePaid = isPaidPlan && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing');
+  const hasActiveSubscription = subscriptionStatus === 'active' && hasSubscription;
+  const showSubscriptionInfo = isPaidPlan && subscriptionStatus !== null;
 
   const getProductId = (planId: string) => {
     if (planId === 'pro') return proProductId;
@@ -153,13 +154,17 @@ export function BillingContent({
               <div className="flex items-center gap-2 text-sm">
                 <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-muted-foreground">결제 수단 / 구독 관리</span>
-                <a
-                  href="/api/portal"
-                  className="ml-auto text-primary hover:underline inline-flex items-center gap-1"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  결제 관리
-                </a>
+                {hasSubscription ? (
+                  <a
+                    href="/api/portal"
+                    className="ml-auto text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    결제 관리
+                  </a>
+                ) : (
+                  <span className="ml-auto text-sm text-muted-foreground">결제 내역 연결 중</span>
+                )}
               </div>
             </div>
           </CardContent>
@@ -202,7 +207,7 @@ export function BillingContent({
           const showPortal = (plan === p.id || isTrialing) && isPaidPlan && p.id === plan;
 
           // 이미 active 구독 중이면 checkout 대신 portal 유도
-          const upgradeTarget = canUpgrade && isActiveSubscription;
+          const upgradeTarget = canUpgrade && isActivePaid;
 
           return (
             <Card
