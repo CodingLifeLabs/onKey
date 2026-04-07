@@ -1,0 +1,16 @@
+- [x] `supabase/migrations/004_storage_signatures.sql` — signatures 버킷
+- [x] `src/middleware.ts` — /onboarding public route (이미 등록됨, 변경 불필요)
+- [x] `src/app/actions/get-session-by-token.ts` — 토큰 → 세션+progress 조회
+- [x] `src/app/actions/update-progress.ts` — 진행 상태 업데이트
+- [x] `src/app/actions/upload-signature-image.ts` — 서명 이미지 업로드
+- [x] `src/app/actions/complete-session.ts` — 세션 완료 처리
+- [x] `src/components/onboarding/blocks/heading-viewer.tsx` — 제목 뷰어
+- [x] `src/components/onboarding/blocks/text-viewer.tsx` — 텍스트 뷰어
+- [x] `src/components/onboarding/blocks/image-viewer.tsx` — 이미지 뷰어
+- [x] `src/components/onboarding/blocks/divider-viewer.tsx` — 구분선 뷰어
+- [x] `src/components/onboarding/blocks/checklist-viewer.tsx` — 체크리스트 인터랙티브
+- [x] `src/components/onboarding/blocks/signature-viewer.tsx` — 서명 캔버스 (signature_pad)
+- [x] `src/components/onboarding/block-viewer.tsx` — 블록 라우터
+- [x] `src/components/onboarding/onboarding-page.tsx` — 메인 페이지 (상태 관리 + 완료)
+- [x] `src/app/onboarding/[token]/page.tsx` — 라우트 페이지
+- [ ] 테스트 (Server Action 테스트 — Phase 2 또 예정)
