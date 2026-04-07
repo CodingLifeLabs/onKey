@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UsageMeter } from '@/components/dashboard/usage-meter';
 import { PlanBadge } from '@/components/dashboard/plan-badge';
-import { CheckCircle, Zap, ExternalLink, Crown, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Zap, ExternalLink, Crown, AlertTriangle, Calendar, CreditCard } from 'lucide-react';
 
 interface BillingContentProps {
   plan: string;
@@ -43,13 +43,21 @@ const PLANS = [
   },
 ] as const;
 
+function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(date);
+}
+
 function formatRemainingDays(endDate: Date): string {
   const now = new Date();
   const diffMs = endDate.getTime() - now.getTime();
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
   if (diffDays <= 0) return '곧 만료';
-  if (diffDays === 1) return '내일 만료';
-  return `${diffDays}일 후 만료`;
+  if (diffDays === 1) return '내일';
+  return `${diffDays}일`;
 }
 
 export function BillingContent({
@@ -66,6 +74,7 @@ export function BillingContent({
   const isCanceled = subscriptionStatus === 'canceled';
   const isPaidPlan = plan === 'pro' || plan === 'enterprise';
   const isActiveSubscription = subscriptionStatus === 'active' && hasSubscription;
+  const showSubscriptionInfo = isPaidPlan && hasSubscription;
 
   const getProductId = (planId: string) => {
     if (planId === 'pro') return proProductId;
@@ -98,8 +107,14 @@ export function BillingContent({
           <div>
             <p className="text-sm font-medium text-amber-800">구독 해지 예정</p>
             <p className="text-sm text-amber-600">
-              {formatRemainingDays(currentPeriodEnd)} 후 Free 플랜으로 전환됩니다. 해지를 철회하려면 결제 관리에서 변경할 수 있습니다.
+              {formatRemainingDays(currentPeriodEnd)} 후({formatDate(currentPeriodEnd)}) Free 플랜으로 전환됩니다.
             </p>
+            <a
+              href="/api/portal"
+              className="text-sm text-primary underline hover:no-underline"
+            >
+              해지 철회하기
+            </a>
           </div>
         </div>
       )}
@@ -122,6 +137,62 @@ export function BillingContent({
         </div>
         <UsageMeter plan={plan} sessionCountThisMonth={sessionCount} />
       </div>
+
+      {/* 구독 정보 카드 — 유료 구독 중일 때만 */}
+      {showSubscriptionInfo && !isCanceled && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground">다음 결제일</span>
+                <span className="ml-auto font-medium">
+                  {currentPeriodEnd ? formatDate(currentPeriodEnd) : '확인 중'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground">결제 수단 / 구독 관리</span>
+                <a
+                  href="/api/portal"
+                  className="ml-auto text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  결제 관리
+                </a>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 취소된 구독 — 관리 링크 */}
+      {isCanceled && isPaidPlan && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground">만료일</span>
+                <span className="ml-auto font-medium">
+                  {currentPeriodEnd ? formatDate(currentPeriodEnd) : '확인 중'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground">구독 관리</span>
+                <a
+                  href="/api/portal"
+                  className="ml-auto text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  해지 철회 / 결제 관리
+                </a>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 플랜 카드 — 3열 */}
       <div className="grid gap-4 md:grid-cols-3">
