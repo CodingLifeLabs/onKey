@@ -5,7 +5,7 @@ import { getOwnerProfile } from '@/lib/clerk/server';
 export async function GET(req: NextRequest) {
   const owner = await getOwnerProfile();
   if (!owner) {
-    return NextResponse.redirect('/sign-in');
+    return NextResponse.redirect(new URL('/sign-in', req.url));
   }
 
   const products = req.nextUrl.searchParams.get('products');
@@ -19,19 +19,26 @@ export async function GET(req: NextRequest) {
     const checkout = await polar.checkouts.create({
       products: productIds,
       customerEmail: owner.profile.email,
-      externalCustomerId: owner.profile.id,
+      customerName: owner.profile.fullName ?? undefined,
+      metadata: {
+        profileId: owner.profile.id,
+        clerkUserId: owner.profile.clerkUserId,
+      },
       successUrl: process.env.NEXT_PUBLIC_APP_URL + '/settings/billing?success=true',
     });
 
     if (!checkout.url) {
-      return NextResponse.json({ error: 'Failed to create checkout' }, { status: 500 });
+      return NextResponse.redirect(
+        new URL('/settings/billing?error=no_checkout_url', req.url),
+      );
     }
 
     return NextResponse.redirect(checkout.url);
   } catch (err) {
-    console.error('Checkout error:', err);
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Checkout error:', message);
     return NextResponse.redirect(
-      process.env.NEXT_PUBLIC_APP_URL + '/settings/billing?error=checkout_failed',
+      new URL(`/settings/billing?error=${encodeURIComponent(message)}`, req.url),
     );
   }
 }
