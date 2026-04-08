@@ -31,7 +31,7 @@ const PLANS = [
     price: '₩29,900',
     period: '/월',
     limit: '월 20개 세션',
-    features: ['Free 전체 기능', '커스텀 템플릿 무제한', 'PDF 완료 확인서', '문서 가져오기', '이메일 발송'],
+    features: ['Free 전체 기능', '커스텀 템플릿 무제한', 'PDF 완료 확인서', '문서 가져오기'],
   },
   {
     id: 'enterprise',

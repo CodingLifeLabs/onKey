@@ -5,14 +5,12 @@ export type FeatureKey =
   | 'customTemplate'
   | 'analytics'
   | 'documentImport'
-  | 'emailNotification'
   | 'customBranding';
 
 const PRO_FEATURES: FeatureKey[] = [
   'pdf',
   'customTemplate',
   'documentImport',
-  'emailNotification',
 ];
 
 const ENTERPRISE_FEATURES: FeatureKey[] = ['customBranding'];
