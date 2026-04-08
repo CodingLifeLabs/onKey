@@ -8,7 +8,9 @@ export default async function NewSessionPage() {
     getAllTemplates(),
     getUserPlan(),
   ]);
-  const templates = [...allTemplates.system, ...allTemplates.user];
+  const templates = plan === 'starter'
+    ? allTemplates.system
+    : [...allTemplates.system, ...allTemplates.user];
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
   const canImport = plan === 'pro' || plan === 'enterprise';
 
