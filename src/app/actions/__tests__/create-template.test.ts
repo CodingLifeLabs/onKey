@@ -8,13 +8,8 @@ vi.mock('@/lib/supabase/service', () => ({
   }),
 }));
 
-vi.mock('@clerk/nextjs/server', () => ({
-  auth: () =>
-    Promise.resolve({
-      userId: 'user_test123',
-      sessionId: 'session_test',
-      getToken: () => Promise.resolve('mock-token'),
-    }),
+vi.mock('@/lib/auth/server', () => ({
+  requireUserId: vi.fn().mockResolvedValue('user_test123'),
 }));
 
 describe('createTemplate', () => {

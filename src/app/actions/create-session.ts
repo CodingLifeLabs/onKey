@@ -1,6 +1,6 @@
 'use server';
 
-import { getOwnerProfile } from '@/lib/clerk/server';
+import { getOwnerProfile } from '@/lib/auth/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { nanoid } from 'nanoid';
 import { createSessionStep1Schema } from '@/lib/validations/session';

@@ -79,7 +79,7 @@ export function ProfileContent({
             <div className="space-y-2">
               <Label htmlFor="email">이메일</Label>
               <Input id="email" value={email} disabled className="bg-muted" />
-              <p className="text-xs text-muted-foreground">이메일은 Clerk에서 관리됩니다</p>
+              <p className="text-xs text-muted-foreground">소셜 로그인 계정의 이메일입니다</p>
             </div>
 
             {message && (

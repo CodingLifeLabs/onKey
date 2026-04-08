@@ -1,6 +1,6 @@
 'use server';
 
-import { getOwnerProfile } from '@/lib/clerk/server';
+import { getOwnerProfile } from '@/lib/auth/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { mapSessionFromRow, mapSessionProgressFromRow } from '@/data/datasources/supabase.datasource';
 import type { Session } from '@/domain/entities/session.entity';

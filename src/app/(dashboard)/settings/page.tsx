@@ -1,4 +1,4 @@
-import { getOwnerProfile } from '@/lib/clerk/server';
+import { getOwnerProfile } from '@/lib/auth/server';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
 import { ProfileContent } from './profile-content';
 

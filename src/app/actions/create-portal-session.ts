@@ -1,6 +1,6 @@
 'use server';
 
-import { getOwnerProfile } from '@/lib/clerk/server';
+import { getOwnerProfile } from '@/lib/auth/server';
 import { polar } from '@/lib/polar';
 
 export async function createPortalSessionAction() {

@@ -1,7 +1,7 @@
 'use server';
 
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireUserId } from '@/lib/clerk/server';
+import { requireUserId } from '@/lib/auth/server';
 import { mapTemplateFromRow } from '@/data/datasources/supabase.datasource';
 import type { Block } from '@/types/block';
 import type { Template } from '@/domain/entities/template.entity';
@@ -10,7 +10,7 @@ export async function updateTemplateContent(
   templateId: string,
   content: Block[],
 ): Promise<Template> {
-  const clerkUserId = await requireUserId();
+  const userId = await requireUserId();
 
   const supabase = createServiceClient();
 
@@ -18,7 +18,7 @@ export async function updateTemplateContent(
   const { data: profile } = await supabase
     .from('profiles')
     .select('id')
-    .eq('clerk_user_id', clerkUserId)
+    .eq('user_id', userId)
     .single();
 
   if (!profile) throw new Error('프로필을 찾을 수 없습니다');

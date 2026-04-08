@@ -1,6 +1,6 @@
 'use server';
 
-import { getOwnerProfile } from '@/lib/clerk/server';
+import { getOwnerProfile } from '@/lib/auth/server';
 import { updateProfileSchema } from '@/lib/validations/profile';
 import { createServiceClient } from '@/lib/supabase/service';
 

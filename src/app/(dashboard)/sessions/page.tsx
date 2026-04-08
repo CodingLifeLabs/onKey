@@ -1,4 +1,4 @@
-import { getOwnerProfile } from '@/lib/clerk/server';
+import { getOwnerProfile } from '@/lib/auth/server';
 import { SessionRepository } from '@/data/repositories/session.repository.impl';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
 import { SessionListClient } from '@/components/sessions/session-list-client';

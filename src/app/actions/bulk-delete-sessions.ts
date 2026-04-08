@@ -1,6 +1,6 @@
 'use server';
 
-import { getOwnerProfile } from '@/lib/clerk/server';
+import { getOwnerProfile } from '@/lib/auth/server';
 import { createServiceClient } from '@/lib/supabase/service';
 
 export async function bulkDeleteSessionsAction(sessionIds: string[]) {

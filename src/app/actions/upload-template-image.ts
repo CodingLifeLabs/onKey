@@ -1,11 +1,11 @@
 'use server';
 
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireUserId } from '@/lib/clerk/server';
+import { requireUserId } from '@/lib/auth/server';
 import { nanoid } from 'nanoid';
 
 export async function uploadTemplateImage(file: File): Promise<{ url: string }> {
-  const clerkUserId = await requireUserId();
+  const userId = await requireUserId();
 
   const supabase = createServiceClient();
 
@@ -13,7 +13,7 @@ export async function uploadTemplateImage(file: File): Promise<{ url: string }> 
   const { data: profile } = await supabase
     .from('profiles')
     .select('id')
-    .eq('clerk_user_id', clerkUserId)
+    .eq('user_id', userId)
     .single();
 
   if (!profile) throw new Error('프로필을 찾을 수 없습니다');

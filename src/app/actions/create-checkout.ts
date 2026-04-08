@@ -1,6 +1,6 @@
 'use server';
 
-import { getOwnerProfile } from '@/lib/clerk/server';
+import { getOwnerProfile } from '@/lib/auth/server';
 import { polar } from '@/lib/polar';
 
 const FAKE_EMAIL_DOMAINS = ['example.com', 'test.com', 'localhost'];
@@ -39,9 +39,9 @@ export async function createCheckoutAction(productId: string) {
       products: [productId],
       metadata: {
         profileId: owner.ownerId,
-        clerkUserId: owner.profile.clerkUserId,
+        userId: owner.profile.userId,
       },
-      externalCustomerId: owner.profile.clerkUserId,
+      externalCustomerId: owner.profile.userId,
     };
 
     // 기존 Polar 고객이면 customerId 전달

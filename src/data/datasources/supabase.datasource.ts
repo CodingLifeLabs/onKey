@@ -9,13 +9,14 @@ import type { Block } from '@/types/block';
 export function mapProfileFromRow(row: Record<string, unknown>): Profile {
   return {
     id: row.id as string,
-    clerkUserId: row.clerk_user_id as string,
+    userId: row.user_id as string,
     email: row.email as string,
     fullName: (row.full_name as string) ?? null,
+    avatarUrl: (row.avatar_url as string) ?? null,
     plan: (row.plan as PlanType) ?? 'starter',
+    subscriptionStatus: (row.subscription_status as Profile['subscriptionStatus']) ?? 'inactive',
     polarCustomerId: (row.polar_customer_id as string) ?? null,
     polarSubscriptionId: (row.polar_subscription_id as string) ?? null,
-    subscriptionStatus: (row.subscription_status as string) ?? null,
     currentPeriodEnd: row.current_period_end ? new Date(row.current_period_end as string) : null,
     cancelAtPeriodEnd: (row.cancel_at_period_end as boolean) ?? false,
     sessionCountThisMonth: (row.session_count_this_month as number) ?? 0,

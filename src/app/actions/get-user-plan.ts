@@ -1,6 +1,6 @@
 'use server';
 
-import { getOwnerProfile } from '@/lib/clerk/server';
+import { getOwnerProfile } from '@/lib/auth/server';
 
 export async function getUserPlan(): Promise<string> {
   const owner = await getOwnerProfile();

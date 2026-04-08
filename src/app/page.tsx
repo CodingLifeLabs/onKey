@@ -1,7 +1,4 @@
-'use client';
-
 import Link from 'next/link';
-import { useClerk } from '@clerk/nextjs';
 import { KeyRound, ArrowRight, CheckCircle, Zap, Smartphone } from 'lucide-react';
 
 const features = [
@@ -23,8 +20,6 @@ const features = [
 ];
 
 export default function LandingPage() {
-  const { openSignIn } = useClerk();
-
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
@@ -36,13 +31,12 @@ export default function LandingPage() {
             </div>
             <span className="text-lg font-bold tracking-tight">OnKey</span>
           </Link>
-          <button
-            type="button"
-            onClick={() => openSignIn()}
-            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 cursor-pointer"
+          <Link
+            href="/login"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4"
           >
             로그인
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -67,14 +61,13 @@ export default function LandingPage() {
           </p>
 
           <div className="mt-10">
-            <button
-              type="button"
-              onClick={() => openSignIn()}
-              className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-base font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-6 cursor-pointer"
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-base font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-6"
             >
               무료로 시작하기
               <ArrowRight className="h-4 w-4" />
-            </button>
+            </Link>
           </div>
         </section>
 

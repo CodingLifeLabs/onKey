@@ -22,7 +22,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { UserButton } from '@clerk/nextjs';
+import { UserMenu } from '@/components/dashboard/user-menu';
 
 const navItems = [
   { title: '대시보드', href: '/home', icon: LayoutDashboard },
@@ -33,7 +33,13 @@ const navItems = [
   { title: '설정', href: '/settings', icon: Settings },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  userFullName: string | null;
+  userEmail: string | null;
+  userAvatarUrl: string | null;
+}
+
+export function AppSidebar({ userFullName, userEmail, userAvatarUrl }: AppSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -82,10 +88,11 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4">
-        <div className="flex items-center gap-3">
-          <UserButton />
-          <span className="text-sm text-muted-foreground">내 계정</span>
-        </div>
+        <UserMenu
+          fullName={userFullName}
+          email={userEmail}
+          avatarUrl={userAvatarUrl}
+        />
       </SidebarFooter>
     </Sidebar>
   );

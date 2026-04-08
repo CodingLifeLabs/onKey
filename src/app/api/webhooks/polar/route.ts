@@ -1,10 +1,12 @@
 import { Webhooks } from '@polar-sh/nextjs';
 import { createServiceClient } from '@/lib/supabase/service';
+import { applyTransition, recordEvent } from '@/domain/subscription';
+import type { Plan, PolarEventType, SubscriptionState } from '@/domain/subscription';
 
 const PRO_PRODUCT_ID = process.env.POLAR_PRO_PRODUCT_ID!;
 const UNLIMITED_PRODUCT_ID = process.env.POLAR_UNLIMITED_PRODUCT_ID!;
 
-function mapProductIdToPlan(productId: string): 'starter' | 'pro' | 'enterprise' {
+function mapProductIdToPlan(productId: string): Plan {
   if (productId === UNLIMITED_PRODUCT_ID) return 'enterprise';
   if (productId === PRO_PRODUCT_ID) return 'pro';
   return 'starter';
@@ -20,7 +22,7 @@ async function findProfile(
   // 1. polar_customer_id로 조회
   const { data: byId } = await supabase
     .from('profiles')
-    .select('id')
+    .select('*')
     .eq('polar_customer_id', customerId)
     .single();
 
@@ -30,7 +32,7 @@ async function findProfile(
   if (customerEmail) {
     const { data: byEmail } = await supabase
       .from('profiles')
-      .select('id')
+      .select('*')
       .eq('email', customerEmail)
       .single();
 
@@ -39,186 +41,359 @@ async function findProfile(
         .from('profiles')
         .update({ polar_customer_id: customerId })
         .eq('id', byEmail.id);
-      console.log(`Linked polar_customer_id ${customerId} to profile ${byEmail.id}`);
+      console.log(`Linked polar_customer_id ${customerId} to profile ${byEmail.id} via email`);
       return byEmail;
     }
   }
 
-  // 3. metadata의 clerkUserId로 fallback + polar_customer_id 저장
-  if (metadata?.clerkUserId) {
-    const { data: byClerkId } = await supabase
+  // 3. metadata의 userId로 fallback + polar_customer_id 저장
+  if (metadata?.userId) {
+    const { data: byUserId } = await supabase
       .from('profiles')
-      .select('id')
-      .eq('clerk_user_id', metadata.clerkUserId as string)
+      .select('*')
+      .eq('user_id', metadata.userId as string)
       .single();
 
-    if (byClerkId) {
+    if (byUserId) {
       await supabase
         .from('profiles')
         .update({ polar_customer_id: customerId })
-        .eq('id', byClerkId.id);
-      console.log(`Linked polar_customer_id ${customerId} to profile ${byClerkId.id} via clerkUserId`);
-      return byClerkId;
+        .eq('id', byUserId.id);
+      console.log(`Linked polar_customer_id ${customerId} to profile ${byUserId.id} via userId`);
+      return byUserId;
     }
   }
 
   return null;
 }
 
+function extractEventData(payload: { data: Record<string, unknown> }) {
+  const data = payload.data;
+  const customerEmail = (data.customer as { email?: string } | undefined)?.email ?? null;
+  const metadata = data.metadata as Record<string, unknown> | undefined | null;
+  return { data, customerEmail, metadata };
+}
+
 export const POST = Webhooks({
   webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
-  onSubscriptionCreated: async (payload) => {
-    const data = payload.data;
-    const plan = mapProductIdToPlan(data.productId);
-    const customerEmail = (data.customer as { email?: string } | undefined)?.email ?? null;
-    const metadata = data.metadata as Record<string, unknown> | undefined | null;
 
-    const profile = await findProfile(data.customerId, customerEmail, metadata);
+  onSubscriptionCreated: async (payload) => {
+    const { data, customerEmail, metadata } = extractEventData(payload);
+    const plan = mapProductIdToPlan(data.productId as string);
+
+    // 멱등성 체크
+    const eventId = `sub_created_${data.id}`;
+    const recorded = await recordEvent({
+      polarEventId: eventId,
+      eventType: 'subscription.created',
+      payload: data,
+    });
+    if (!recorded) return;
+
+    const profile = await findProfile(data.customerId as string, customerEmail, metadata);
     if (!profile) return;
+
+    // 상태 머신 적용
+    const currentState: SubscriptionState = {
+      plan: profile.plan as Plan,
+      status: profile.subscription_status as SubscriptionState['status'],
+      currentPeriodEnd: profile.current_period_end ? new Date(profile.current_period_end) : null,
+      cancelAtPeriodEnd: profile.cancel_at_period_end ?? false,
+      polarCustomerId: profile.polar_customer_id,
+      polarSubscriptionId: profile.polar_subscription_id,
+    };
+
+    const result = applyTransition({
+      current: currentState,
+      event: 'subscription.created',
+      data: {
+        plan,
+        customerId: data.customerId as string,
+        subscriptionId: data.id as string,
+        currentPeriodEnd: data.currentPeriodEnd ? new Date(data.currentPeriodEnd as string) : null,
+        cancelAtPeriodEnd: false,
+      },
+    });
+
+    if (!result) return;
 
     const supabase = createServiceClient();
     await supabase
       .from('profiles')
       .update({
-        plan,
+        plan: result.plan,
+        subscription_status: result.status,
         polar_customer_id: data.customerId,
         polar_subscription_id: data.id,
-        subscription_status: data.status,
-        current_period_end: data.currentPeriodEnd ?? null,
+        current_period_end: result.currentPeriodEnd?.toISOString() ?? null,
+        cancel_at_period_end: result.cancelAtPeriodEnd,
       })
       .eq('id', profile.id);
 
-    console.log(`subscription.created: profile ${profile.id} → ${plan} (${data.status})`);
+    console.log(`subscription.created: profile ${profile.id} → ${result.plan} (${result.status})`);
   },
 
   onSubscriptionUpdated: async (payload) => {
-    const data = payload.data;
-    const plan = mapProductIdToPlan(data.productId);
-    const customerEmail = (data.customer as { email?: string } | undefined)?.email ?? null;
-    const metadata = data.metadata as Record<string, unknown> | undefined | null;
+    const { data, customerEmail, metadata } = extractEventData(payload);
+    const plan = mapProductIdToPlan(data.productId as string);
 
-    const profile = await findProfile(data.customerId, customerEmail, metadata);
+    const eventId = `sub_updated_${data.id}`;
+    const recorded = await recordEvent({
+      polarEventId: eventId,
+      eventType: 'subscription.updated',
+      payload: data,
+    });
+    if (!recorded) return;
+
+    const profile = await findProfile(data.customerId as string, customerEmail, metadata);
     if (!profile) return;
+
+    const currentState: SubscriptionState = {
+      plan: profile.plan as Plan,
+      status: profile.subscription_status as SubscriptionState['status'],
+      currentPeriodEnd: profile.current_period_end ? new Date(profile.current_period_end) : null,
+      cancelAtPeriodEnd: profile.cancel_at_period_end ?? false,
+      polarCustomerId: profile.polar_customer_id,
+      polarSubscriptionId: profile.polar_subscription_id,
+    };
+
+    const result = applyTransition({
+      current: currentState,
+      event: 'subscription.updated',
+      data: {
+        plan,
+        customerId: data.customerId as string,
+        subscriptionId: data.id as string,
+        currentPeriodEnd: data.currentPeriodEnd ? new Date(data.currentPeriodEnd as string) : null,
+        cancelAtPeriodEnd: false,
+      },
+    });
+
+    if (!result) return;
 
     const supabase = createServiceClient();
     await supabase
       .from('profiles')
       .update({
-        plan,
+        plan: result.plan,
+        subscription_status: result.status,
         polar_customer_id: data.customerId,
         polar_subscription_id: data.id,
-        subscription_status: data.status,
-        current_period_end: data.currentPeriodEnd ?? null,
+        current_period_end: result.currentPeriodEnd?.toISOString() ?? null,
+        cancel_at_period_end: result.cancelAtPeriodEnd,
       })
       .eq('id', profile.id);
 
-    console.log(`subscription.updated: profile ${profile.id} → ${plan} (${data.status})`);
+    console.log(`subscription.updated: profile ${profile.id} → ${result.plan} (${result.status})`);
   },
 
   onSubscriptionActive: async (payload) => {
-    const data = payload.data;
-    const plan = mapProductIdToPlan(data.productId);
-    const customerEmail = (data.customer as { email?: string } | undefined)?.email ?? null;
-    const metadata = data.metadata as Record<string, unknown> | undefined | null;
+    const { data, customerEmail, metadata } = extractEventData(payload);
+    const plan = mapProductIdToPlan(data.productId as string);
 
-    const profile = await findProfile(data.customerId, customerEmail, metadata);
+    const eventId = `sub_active_${data.id}`;
+    const recorded = await recordEvent({
+      polarEventId: eventId,
+      eventType: 'subscription.active',
+      payload: data,
+    });
+    if (!recorded) return;
+
+    const profile = await findProfile(data.customerId as string, customerEmail, metadata);
     if (!profile) return;
+
+    const currentState: SubscriptionState = {
+      plan: profile.plan as Plan,
+      status: profile.subscription_status as SubscriptionState['status'],
+      currentPeriodEnd: profile.current_period_end ? new Date(profile.current_period_end) : null,
+      cancelAtPeriodEnd: profile.cancel_at_period_end ?? false,
+      polarCustomerId: profile.polar_customer_id,
+      polarSubscriptionId: profile.polar_subscription_id,
+    };
+
+    const result = applyTransition({
+      current: currentState,
+      event: 'subscription.active',
+      data: {
+        plan,
+        customerId: data.customerId as string,
+        subscriptionId: data.id as string,
+        currentPeriodEnd: data.currentPeriodEnd ? new Date(data.currentPeriodEnd as string) : null,
+        cancelAtPeriodEnd: false,
+      },
+    });
+
+    if (!result) return;
 
     const supabase = createServiceClient();
     await supabase
       .from('profiles')
       .update({
-        plan,
+        plan: result.plan,
+        subscription_status: result.status,
         polar_customer_id: data.customerId,
         polar_subscription_id: data.id,
-        subscription_status: 'active',
-        current_period_end: data.currentPeriodEnd ?? null,
+        current_period_end: result.currentPeriodEnd?.toISOString() ?? null,
         cancel_at_period_end: false,
       })
       .eq('id', profile.id);
 
-    console.log(`subscription.active: profile ${profile.id} → ${plan}`);
+    console.log(`subscription.active: profile ${profile.id} → ${result.plan} (${result.status})`);
   },
 
   onSubscriptionCanceled: async (payload) => {
-    const data = payload.data;
-    const customerEmail = (data.customer as { email?: string } | undefined)?.email ?? null;
-    const metadata = data.metadata as Record<string, unknown> | undefined | null;
+    const { data, customerEmail, metadata } = extractEventData(payload);
 
-    const profile = await findProfile(data.customerId, customerEmail, metadata);
+    const eventId = `sub_canceled_${data.id}`;
+    const recorded = await recordEvent({
+      polarEventId: eventId,
+      eventType: 'subscription.canceled',
+      payload: data,
+    });
+    if (!recorded) return;
+
+    const profile = await findProfile(data.customerId as string, customerEmail, metadata);
     if (!profile) return;
 
+    const currentState: SubscriptionState = {
+      plan: profile.plan as Plan,
+      status: profile.subscription_status as SubscriptionState['status'],
+      currentPeriodEnd: profile.current_period_end ? new Date(profile.current_period_end) : null,
+      cancelAtPeriodEnd: profile.cancel_at_period_end ?? false,
+      polarCustomerId: profile.polar_customer_id,
+      polarSubscriptionId: profile.polar_subscription_id,
+    };
+
+    const result = applyTransition({
+      current: currentState,
+      event: 'subscription.canceled',
+      data: {
+        plan: profile.plan as Plan,
+        customerId: data.customerId as string,
+        subscriptionId: data.id as string,
+        currentPeriodEnd: data.currentPeriodEnd ? new Date(data.currentPeriodEnd as string) : null,
+        cancelAtPeriodEnd: data.cancelAtPeriodEnd as boolean ?? false,
+      },
+    });
+
+    if (!result) return;
+
     const supabase = createServiceClient();
-    if (data.cancelAtPeriodEnd) {
-      // 기간 종료까지 현재 플랜 유지
-      await supabase
-        .from('profiles')
-        .update({
-          subscription_status: 'canceled',
-          cancel_at_period_end: true,
-          current_period_end: data.currentPeriodEnd ?? null,
-        })
-        .eq('id', profile.id);
-      console.log(`subscription.canceled (end of period): profile ${profile.id}`);
-    } else {
-      // 즉시 다운그레이드
-      await supabase
-        .from('profiles')
-        .update({
-          plan: 'starter',
-          subscription_status: 'canceled',
-          cancel_at_period_end: false,
-          current_period_end: null,
-        })
-        .eq('id', profile.id);
-      console.log(`subscription.canceled (immediate): profile ${profile.id} → starter`);
-    }
+    await supabase
+      .from('profiles')
+      .update({
+        plan: result.plan,
+        subscription_status: result.status,
+        current_period_end: result.currentPeriodEnd?.toISOString() ?? null,
+        cancel_at_period_end: result.cancelAtPeriodEnd,
+      })
+      .eq('id', profile.id);
+
+    console.log(`subscription.canceled: profile ${profile.id} → ${result.plan} (${result.status})`);
   },
 
   onSubscriptionRevoked: async (payload) => {
-    const data = payload.data;
-    const customerEmail = (data.customer as { email?: string } | undefined)?.email ?? null;
-    const metadata = data.metadata as Record<string, unknown> | undefined | null;
+    const { data, customerEmail, metadata } = extractEventData(payload);
 
-    const profile = await findProfile(data.customerId, customerEmail, metadata);
+    const eventId = `sub_revoked_${data.id}`;
+    const recorded = await recordEvent({
+      polarEventId: eventId,
+      eventType: 'subscription.revoked',
+      payload: data,
+    });
+    if (!recorded) return;
+
+    const profile = await findProfile(data.customerId as string, customerEmail, metadata);
     if (!profile) return;
+
+    const currentState: SubscriptionState = {
+      plan: profile.plan as Plan,
+      status: profile.subscription_status as SubscriptionState['status'],
+      currentPeriodEnd: profile.current_period_end ? new Date(profile.current_period_end) : null,
+      cancelAtPeriodEnd: profile.cancel_at_period_end ?? false,
+      polarCustomerId: profile.polar_customer_id,
+      polarSubscriptionId: profile.polar_subscription_id,
+    };
+
+    const result = applyTransition({
+      current: currentState,
+      event: 'subscription.revoked',
+      data: {
+        plan: 'starter',
+        customerId: data.customerId as string,
+        subscriptionId: data.id as string,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+      },
+    });
+
+    if (!result) return;
 
     const supabase = createServiceClient();
     await supabase
       .from('profiles')
       .update({
         plan: 'starter',
-        subscription_status: 'canceled',
+        subscription_status: 'expired',
         cancel_at_period_end: false,
         current_period_end: null,
       })
       .eq('id', profile.id);
 
-    console.log(`subscription.revoked: profile ${profile.id} → starter`);
+    console.log(`subscription.revoked: profile ${profile.id} → starter (expired)`);
   },
 
   onSubscriptionUncanceled: async (payload) => {
-    const data = payload.data;
-    const plan = mapProductIdToPlan(data.productId);
-    const customerEmail = (data.customer as { email?: string } | undefined)?.email ?? null;
-    const metadata = data.metadata as Record<string, unknown> | undefined | null;
+    const { data, customerEmail, metadata } = extractEventData(payload);
+    const plan = mapProductIdToPlan(data.productId as string);
 
-    const profile = await findProfile(data.customerId, customerEmail, metadata);
+    const eventId = `sub_uncanceled_${data.id}`;
+    const recorded = await recordEvent({
+      polarEventId: eventId,
+      eventType: 'subscription.uncanceled',
+      payload: data,
+    });
+    if (!recorded) return;
+
+    const profile = await findProfile(data.customerId as string, customerEmail, metadata);
     if (!profile) return;
+
+    const currentState: SubscriptionState = {
+      plan: profile.plan as Plan,
+      status: profile.subscription_status as SubscriptionState['status'],
+      currentPeriodEnd: profile.current_period_end ? new Date(profile.current_period_end) : null,
+      cancelAtPeriodEnd: profile.cancel_at_period_end ?? false,
+      polarCustomerId: profile.polar_customer_id,
+      polarSubscriptionId: profile.polar_subscription_id,
+    };
+
+    const result = applyTransition({
+      current: currentState,
+      event: 'subscription.uncanceled',
+      data: {
+        plan,
+        customerId: data.customerId as string,
+        subscriptionId: data.id as string,
+        currentPeriodEnd: data.currentPeriodEnd ? new Date(data.currentPeriodEnd as string) : null,
+        cancelAtPeriodEnd: false,
+      },
+    });
+
+    if (!result) return;
 
     const supabase = createServiceClient();
     await supabase
       .from('profiles')
       .update({
-        plan,
-        polar_subscription_id: data.id,
+        plan: result.plan,
         subscription_status: 'active',
+        polar_subscription_id: data.id,
+        current_period_end: result.currentPeriodEnd?.toISOString() ?? null,
         cancel_at_period_end: false,
-        current_period_end: data.currentPeriodEnd ?? null,
       })
       .eq('id', profile.id);
 
-    console.log(`subscription.uncanceled: profile ${profile.id} → ${plan} (active)`);
+    console.log(`subscription.uncanceled: profile ${profile.id} → ${result.plan} (active)`);
   },
 
   onOrderCreated: async (payload) => {

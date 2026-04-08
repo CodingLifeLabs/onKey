@@ -1,14 +1,14 @@
 'use server';
 
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireUserId } from '@/lib/clerk/server';
+import { requireUserId } from '@/lib/auth/server';
 import { mapTemplateFromRow } from '@/data/datasources/supabase.datasource';
 import type { Template } from '@/domain/entities/template.entity';
 
 export async function getTemplate(
   templateId: string,
 ): Promise<Template | null> {
-  const clerkUserId = await requireUserId();
+  const userId = await requireUserId();
 
   const supabase = createServiceClient();
 
@@ -16,7 +16,7 @@ export async function getTemplate(
   const { data: profile } = await supabase
     .from('profiles')
     .select('id')
-    .eq('clerk_user_id', clerkUserId)
+    .eq('user_id', userId)
     .single();
 
   if (!profile) return null;

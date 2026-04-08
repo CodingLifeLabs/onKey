@@ -1,6 +1,6 @@
 'use server';
 
-import { getOwnerProfile } from '@/lib/clerk/server';
+import { getOwnerProfile } from '@/lib/auth/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { format, subMonths, startOfMonth, endOfMonth, differenceInMinutes } from 'date-fns';
 import type { AnalyticsOverview, SessionStatusDistribution, MonthlyTrend, TemplateStats } from '@/types/analytics';

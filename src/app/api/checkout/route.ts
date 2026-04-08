@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { polar } from '@/lib/polar';
-import { getOwnerProfile } from '@/lib/clerk/server';
+import { getOwnerProfile } from '@/lib/auth/server';
 
 const FAKE_EMAIL_DOMAINS = ['example.com', 'test.com', 'localhost'];
 
@@ -11,7 +11,7 @@ function isFakeEmail(email: string): boolean {
 export async function GET(req: NextRequest) {
   const owner = await getOwnerProfile();
   if (!owner) {
-    return NextResponse.redirect(new URL('/sign-in', req.url));
+    return NextResponse.redirect(new URL('/login', req.url));
   }
 
   const products = req.nextUrl.searchParams.get('products');
@@ -43,9 +43,9 @@ export async function GET(req: NextRequest) {
       products: productIds,
       metadata: {
         profileId: owner.profile.id,
-        clerkUserId: owner.profile.clerkUserId,
+        userId: owner.profile.userId,
       },
-      externalCustomerId: owner.profile.clerkUserId,
+      externalCustomerId: owner.profile.userId,
       successUrl: process.env.NEXT_PUBLIC_APP_URL + '/settings/billing?success=true',
     };
 

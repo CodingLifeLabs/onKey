@@ -1,33 +1,61 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-const isPublicRoute = createRouteMatcher([
+const PUBLIC_ROUTES = [
   '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/onboarding/(.*)',
-  '/api/webhooks/(.*)',
-  '/api/sessions/(.*)',
-]);
+  '/login',
+  '/auth/callback',
+];
 
-export default clerkMiddleware(async (auth, request) => {
-  const { userId } = await auth();
+const PUBLIC_PATTERNS = [
+  /^\/onboarding\/(.*)/,
+  /^\/api\/webhooks\/(.*)/,
+  /^\/api\/sessions\/(.*)/,
+];
 
-  // 인증된 사용자가 랜딩(/)에 접속하면 /home으로 리디렉트
-  if (userId && request.nextUrl.pathname === '/') {
+function isPublicRoute(pathname: string): boolean {
+  if (PUBLIC_ROUTES.includes(pathname)) return true;
+  return PUBLIC_PATTERNS.some((pattern) => pattern.test(pathname));
+}
+
+export async function middleware(request: NextRequest) {
+  const response = NextResponse.next();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    },
+  );
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // 인증된 사용자가 랜딩(/)에 접속하면 /home으로 리다이렉트
+  if (user && request.nextUrl.pathname === '/') {
     return NextResponse.redirect(new URL('/home', request.url));
   }
 
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+  // 인증되지 않은 사용자가 보호된 라우트에 접속하면 /login으로 리다이렉트
+  if (!user && !isPublicRoute(request.nextUrl.pathname)) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  return NextResponse.next();
-});
+  return response;
+}
 
 export const config = {
   matcher: [
-    // Next.js 내부 경로 및 정적 파일 제외
     '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
   ],
 };

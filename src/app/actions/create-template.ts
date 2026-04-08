@@ -1,7 +1,7 @@
 'use server';
 
 import { createServiceClient } from '@/lib/supabase/service';
-import { requireUserId } from '@/lib/clerk/server';
+import { requireUserId } from '@/lib/auth/server';
 import { mapTemplateFromRow } from '@/data/datasources/supabase.datasource';
 import type { Template } from '@/domain/entities/template.entity';
 
@@ -9,14 +9,14 @@ export async function createTemplate(data: {
   name: string;
   description?: string;
 }): Promise<Template> {
-  const clerkUserId = await requireUserId();
+  const userId = await requireUserId();
 
   const supabase = createServiceClient();
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, plan')
-    .eq('clerk_user_id', clerkUserId)
+    .eq('user_id', userId)
     .single();
 
   if (!profile) throw new Error('프로필을 찾을 수 없습니다');
