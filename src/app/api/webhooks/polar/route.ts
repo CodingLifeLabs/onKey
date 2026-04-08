@@ -2,6 +2,7 @@ import { Webhooks } from '@polar-sh/nextjs';
 import { createServiceClient } from '@/lib/supabase/service';
 import { applyTransition, recordEvent } from '@/domain/subscription';
 import type { Plan, PolarEventType, SubscriptionState } from '@/domain/subscription';
+import { revalidatePath } from 'next/cache';
 
 const PRO_PRODUCT_ID = process.env.POLAR_PRO_PRODUCT_ID!;
 const UNLIMITED_PRODUCT_ID = process.env.POLAR_UNLIMITED_PRODUCT_ID!;
@@ -131,6 +132,8 @@ export const POST = Webhooks({
       .eq('id', profile.id);
 
     console.log(`subscription.created: profile ${profile.id} → ${result.plan} (${result.status})`);
+    revalidatePath('/settings/billing');
+    revalidatePath('/home');
   },
 
   onSubscriptionUpdated: async (payload) => {
@@ -185,6 +188,8 @@ export const POST = Webhooks({
       .eq('id', profile.id);
 
     console.log(`subscription.updated: profile ${profile.id} → ${result.plan} (${result.status})`);
+    revalidatePath('/settings/billing');
+    revalidatePath('/home');
   },
 
   onSubscriptionActive: async (payload) => {
@@ -239,6 +244,8 @@ export const POST = Webhooks({
       .eq('id', profile.id);
 
     console.log(`subscription.active: profile ${profile.id} → ${result.plan} (${result.status})`);
+    revalidatePath('/settings/billing');
+    revalidatePath('/home');
   },
 
   onSubscriptionCanceled: async (payload) => {
@@ -290,6 +297,8 @@ export const POST = Webhooks({
       .eq('id', profile.id);
 
     console.log(`subscription.canceled: profile ${profile.id} → ${result.plan} (${result.status})`);
+    revalidatePath('/settings/billing');
+    revalidatePath('/home');
   },
 
   onSubscriptionRevoked: async (payload) => {
@@ -341,6 +350,8 @@ export const POST = Webhooks({
       .eq('id', profile.id);
 
     console.log(`subscription.revoked: profile ${profile.id} → starter (expired)`);
+    revalidatePath('/settings/billing');
+    revalidatePath('/home');
   },
 
   onSubscriptionUncanceled: async (payload) => {
@@ -394,6 +405,8 @@ export const POST = Webhooks({
       .eq('id', profile.id);
 
     console.log(`subscription.uncanceled: profile ${profile.id} → ${result.plan} (active)`);
+    revalidatePath('/settings/billing');
+    revalidatePath('/home');
   },
 
   onOrderCreated: async (payload) => {

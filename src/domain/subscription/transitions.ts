@@ -17,9 +17,9 @@ type TransitionRule = {
 };
 
 const RULES: TransitionRule[] = [
-  // subscription.created → 첫 구독 (inactive/trialing)
+  // subscription.created → 첫 구독 또는 재구독
   {
-    from: ['inactive'],
+    from: ['inactive', 'expired', 'canceled'],
     event: 'subscription.created',
     to: 'active',
     resolvePlan: (_current, eventPlan) => eventPlan,
@@ -27,9 +27,9 @@ const RULES: TransitionRule[] = [
     resolveCancelAtPeriodEnd: () => false,
   },
 
-  // subscription.active → 체험→유료 전환 또는 일반 활성화
+  // subscription.active → 체험→유료 전환 또는 재활성화
   {
-    from: ['trialing', 'inactive', 'past_due', 'active'],
+    from: ['trialing', 'inactive', 'past_due', 'active', 'expired', 'canceled'],
     event: 'subscription.active',
     to: 'active',
     resolvePlan: (_current, eventPlan) => eventPlan,
@@ -39,7 +39,7 @@ const RULES: TransitionRule[] = [
 
   // subscription.updated → 플랜 변경
   {
-    from: ['active', 'trialing'],
+    from: ['active', 'trialing', 'expired', 'canceled'],
     event: 'subscription.updated',
     to: 'active',
     resolvePlan: (_current, eventPlan) => eventPlan,
