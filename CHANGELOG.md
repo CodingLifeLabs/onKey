@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-04-08 — Unlimited 요금제 템플릿 기능 수정
+- templates/page.tsx isPro 조건에 enterprise 플랜 누락 수정 (plan === 'pro' → plan === 'pro' || plan === 'enterprise')
+- Enterprise(Unlimited) 요금제에서 "새 템플릿" 버튼 및 편집/복제 메뉴 정상 노출
+
 ## 2026-04-08 — Polar 구독 결제 플로우 수정
 - DB: profiles에 `current_period_end`, `cancel_at_period_end` 컬럼 추가 (마이그레이션 007)
 - Clerk 웹훅에 `user.updated` 핸들러 추가 (이메일/이름 변경 시 DB 동기화)

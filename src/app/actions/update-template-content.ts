@@ -9,6 +9,7 @@ import type { Template } from '@/domain/entities/template.entity';
 export async function updateTemplateContent(
   templateId: string,
   content: Block[],
+  name?: string,
 ): Promise<Template> {
   const userId = await requireUserId();
 
@@ -27,6 +28,7 @@ export async function updateTemplateContent(
     .from('templates')
     .update({
       content,
+      ...(name ? { name } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq('id', templateId)

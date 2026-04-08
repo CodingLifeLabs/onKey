@@ -31,7 +31,7 @@ export default function TemplatesPage() {
       getUserPlan(),
     ]);
     setTemplates(data);
-    setIsPro(plan === 'pro');
+    setIsPro(plan === 'pro' || plan === 'enterprise');
     setIsLoading(false);
   };
 

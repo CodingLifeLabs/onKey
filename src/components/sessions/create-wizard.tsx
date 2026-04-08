@@ -17,9 +17,11 @@ const STEPS = ['기본 정보', '템플릿 선택', '콘텐츠 편집', '링크 
 export function CreateWizard({
   templates,
   appUrl,
+  canImport,
 }: {
   templates: Template[];
   appUrl: string;
+  canImport?: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -106,6 +108,7 @@ export function CreateWizard({
           initialBlocks={contentBlocks}
           onNext={handleStep3Next}
           onBack={() => setStep(2)}
+          canImport={canImport}
         />
       )}
 

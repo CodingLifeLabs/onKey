@@ -1,4 +1,5 @@
 import { getTemplate } from '@/app/actions/get-template';
+import { getUserPlan } from '@/app/actions/get-user-plan';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
 import { TemplateEditor } from '@/components/editor/template-editor';
 import { notFound } from 'next/navigation';
@@ -9,9 +10,14 @@ export default async function EditTemplatePage({
   params: Promise<{ templateId: string }>;
 }) {
   const { templateId } = await params;
-  const template = await getTemplate(templateId);
+  const [template, plan] = await Promise.all([
+    getTemplate(templateId),
+    getUserPlan(),
+  ]);
 
   if (!template) notFound();
+
+  const canImport = plan === 'pro' || plan === 'enterprise';
 
   return (
     <>
@@ -20,7 +26,7 @@ export default async function EditTemplatePage({
         description={template.name}
       />
       <div className="p-6">
-        <TemplateEditor template={template} />
+        <TemplateEditor template={template} canImport={canImport} />
       </div>
     </>
   );

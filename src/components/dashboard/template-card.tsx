@@ -79,17 +79,19 @@ export function TemplateCard({
                 <MoreVertical className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => isPro ? router.push(`/templates/${template.id}/edit`) : handleProOnly('템플릿 편집')}
-                >
-                  {isPro ? (
-                    <Edit className="mr-2 h-4 w-4" />
-                  ) : (
-                    <Lock className="mr-2 h-4 w-4 text-muted-foreground" />
-                  )}
-                  편집
-                  {!isPro && <span className="ml-auto text-[10px] text-muted-foreground">Pro</span>}
-                </DropdownMenuItem>
+                {!template.isSystem && (
+                  <DropdownMenuItem
+                    onClick={() => isPro ? router.push(`/templates/${template.id}/edit`) : handleProOnly('템플릿 편집')}
+                  >
+                    {isPro ? (
+                      <Edit className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Lock className="mr-2 h-4 w-4 text-muted-foreground" />
+                    )}
+                    편집
+                    {!isPro && <span className="ml-auto text-[10px] text-muted-foreground">Pro</span>}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => isPro ? onDuplicate(template.id) : handleProOnly('템플릿 복제')}
                   disabled={isPro && isDuplicating}

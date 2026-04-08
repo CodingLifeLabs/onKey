@@ -18,13 +18,18 @@ import { ImportContentDialog } from './import-content-dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/input';
 
 interface TemplateEditorProps {
   template: Template;
+  canImport?: boolean;
 }
 
-export function TemplateEditor({ template }: TemplateEditorProps) {
+export function TemplateEditor({ template, canImport }: TemplateEditorProps) {
+  const router = useRouter();
   const [blocks, setBlocks] = useState<Block[]>(template.content);
+  const [templateName, setTemplateName] = useState(template.name);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -91,9 +96,10 @@ export function TemplateEditor({ template }: TemplateEditorProps) {
 
     setSaving(true);
     try {
-      await updateTemplateContent(template.id, blocks);
+      await updateTemplateContent(template.id, blocks, templateName !== template.name ? templateName : undefined);
       setIsDirty(false);
       toast.success('템플릿이 저장되었습니다.');
+      router.push('/templates');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '저장에 실패했습니다');
     } finally {
@@ -103,6 +109,15 @@ export function TemplateEditor({ template }: TemplateEditorProps) {
 
   return (
     <div className="space-y-4">
+      <Input
+        value={templateName}
+        onChange={(e) => {
+          setTemplateName(e.target.value);
+          setIsDirty(true);
+        }}
+        className="text-lg font-semibold border-dashed h-auto py-1"
+        placeholder="템플릿 이름"
+      />
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
           <Button
@@ -128,15 +143,17 @@ export function TemplateEditor({ template }: TemplateEditorProps) {
       {!preview && (
         <div className="flex items-center gap-2">
           <BlockToolbar onAdd={handleAdd} />
-          <ImportContentDialog
-            onImport={(imported) => {
-              setBlocks((prev) => {
-                const merged = [...prev, ...imported];
-                return merged.map((b, i) => ({ ...b, order: i }));
-              });
-              setIsDirty(true);
-            }}
-          />
+          {canImport && (
+            <ImportContentDialog
+              onImport={(imported) => {
+                setBlocks((prev) => {
+                  const merged = [...prev, ...imported];
+                  return merged.map((b, i) => ({ ...b, order: i }));
+                });
+                setIsDirty(true);
+              }}
+            />
+          )}
         </div>
       )}
 

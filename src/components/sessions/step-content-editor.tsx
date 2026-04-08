@@ -19,12 +19,14 @@ interface StepContentEditorProps {
   initialBlocks: Block[];
   onNext: (blocks: Block[]) => void;
   onBack: () => void;
+  canImport?: boolean;
 }
 
 export function StepContentEditor({
   initialBlocks,
   onNext,
   onBack,
+  canImport,
 }: StepContentEditorProps) {
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
   const [preview, setPreview] = useState(false);
@@ -91,14 +93,16 @@ export function StepContentEditor({
       {!preview && (
         <div className="flex items-center gap-2">
           <BlockToolbar onAdd={handleAdd} />
-          <ImportContentDialog
-            onImport={(imported) => {
-              setBlocks((prev) => {
-                const merged = [...prev, ...imported];
-                return merged.map((b, i) => ({ ...b, order: i }));
-              });
-            }}
-          />
+          {canImport && (
+            <ImportContentDialog
+              onImport={(imported) => {
+                setBlocks((prev) => {
+                  const merged = [...prev, ...imported];
+                  return merged.map((b, i) => ({ ...b, order: i }));
+                });
+              }}
+            />
+          )}
         </div>
       )}
 

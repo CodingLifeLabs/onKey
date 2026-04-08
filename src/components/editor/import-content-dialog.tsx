@@ -55,21 +55,21 @@ export function ImportContentDialog({ onImport }: ImportContentDialogProps) {
         <FileUp className="h-4 w-4" />
         가져오기
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>문서 가져오기</DialogTitle>
           <DialogDescription>
             기존 입주 안내 문서 내용을 붙여넣으세요. 제목과 텍스트 블록으로 자동 변환됩니다.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-3 overflow-y-auto min-h-0 flex-1">
           <Textarea
             placeholder={`# 입주 안내사항\n\n입주를 축하드립니다...\n\n## 주차 안내\n\n지하 1~2층 주차장을 사용하실 수 있습니다.\n\n---\n\n## 쓰레기 분리수거\n\n쓰레기 분리수거는 매일 오전 8시까지...`}
             value={text}
             onChange={(e) => { setText(e.target.value); setPreviewBlocks([]); }}
             rows={10}
-            className="font-mono text-sm"
+            className="font-mono text-sm resize-none"
           />
 
           <div className="flex items-center justify-between">
@@ -106,7 +106,7 @@ export function ImportContentDialog({ onImport }: ImportContentDialogProps) {
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <DialogClose render={<Button variant="outline" />}>
             취소
           </DialogClose>

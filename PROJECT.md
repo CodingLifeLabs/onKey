@@ -144,5 +144,6 @@ src/
 - 서명 업로드: `signatures` 버킷 (public 읽기 + service_role 업로드), signature_pad 캔버스
 - 세션 진행: SessionProgress 기반 (viewedSections, checkedItems, signatureName, signatureImageUrl, submittedAt)
 - Feature Gating 전략: Starter 에디터 제한 없음 → Pro는 시간 절감 기능(문서 가져오기, 이메일)으로 전환 유도 (2026-04-07)
+- 템플릿 관리 isPro 조건: `plan === 'pro' || plan === 'enterprise'` 통일 (2026-04-08)
 - 세션 만료: Repository 조회 시 만료일 지난 pending/in_progress 자동 expired 전환 (2026-04-07)
 - 로딩 스켈레톤: home, sessions, analytics에 Next.js loading.tsx 적용 (2026-04-07)
