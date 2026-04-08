@@ -399,4 +399,38 @@ export const POST = Webhooks({
   onOrderCreated: async (payload) => {
     console.log(`order.created: customer ${payload.data.customerId}`);
   },
+
+  onOrderPaid: async (payload) => {
+    console.log(`order.paid: customer ${payload.data.customerId}, order ${payload.data.id}`);
+  },
+
+  onOrderRefunded: async (payload) => {
+    const data = payload.data;
+    console.log(`order.refunded: customer ${data.customerId}, order ${data.id}`);
+
+    // 환불 발생 → 구독을 즉시 starter로 다운그레이드
+    const profile = await findProfile(
+      data.customerId as string,
+      (data.customer as { email?: string } | undefined)?.email ?? null,
+      data.metadata as Record<string, unknown> | null,
+    );
+    if (!profile) return;
+
+    const supabase = createServiceClient();
+    await supabase
+      .from('profiles')
+      .update({
+        plan: 'starter',
+        subscription_status: 'expired',
+        cancel_at_period_end: false,
+        current_period_end: null,
+      })
+      .eq('id', profile.id);
+
+    console.log(`order.refunded: profile ${profile.id} → starter (expired)`);
+  },
+
+  onRefundCreated: async (payload) => {
+    console.log(`refund.created: ${payload.data.id}, subscription ${payload.data.subscriptionId}`);
+  },
 });
