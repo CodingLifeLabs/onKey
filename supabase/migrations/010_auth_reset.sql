@@ -10,11 +10,11 @@ DROP POLICY IF EXISTS "templates_system_read" ON templates;
 DROP POLICY IF EXISTS "templates_owner_all" ON templates;
 DROP POLICY IF EXISTS "sessions_owner_all" ON sessions;
 
-DROP FUNCTION IF EXISTS increment_session_count(UUID);
-DROP FUNCTION IF EXISTS expire_sessions();
-DROP FUNCTION IF EXISTS handle_auth_user_created();
-DROP FUNCTION IF EXISTS handle_auth_user_updated();
-DROP FUNCTION IF EXISTS handle_auth_user_deleted();
+DROP FUNCTION IF EXISTS increment_session_count(UUID) CASCADE;
+DROP FUNCTION IF EXISTS expire_sessions() CASCADE;
+DROP FUNCTION IF EXISTS handle_auth_user_created() CASCADE;
+DROP FUNCTION IF EXISTS handle_auth_user_updated() CASCADE;
+DROP FUNCTION IF EXISTS handle_auth_user_deleted() CASCADE;
 
 -- subscription_events 테이블이 있으면 삭제
 DROP TABLE IF EXISTS subscription_events CASCADE;
