@@ -71,6 +71,21 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('Checkout error:', message);
+
+    // "already have active subscription" → Portal로 리다이렉트
+    if (message.toLowerCase().includes('active subscription') && owner.profile.polarCustomerId) {
+      try {
+        const session = await polar.customerSessions.create({
+          customerId: owner.profile.polarCustomerId,
+        });
+        if (session.customerPortalUrl) {
+          return NextResponse.redirect(session.customerPortalUrl);
+        }
+      } catch {
+        // Portal도 실패하면 에러 페이지로
+      }
+    }
+
     return NextResponse.redirect(
       new URL(`/settings/billing?error=${encodeURIComponent(message.slice(0, 200))}`, req.url),
     );
