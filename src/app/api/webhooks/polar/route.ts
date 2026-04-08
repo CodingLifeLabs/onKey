@@ -1,4 +1,5 @@
 import { Webhooks } from '@polar-sh/nextjs';
+import { polar } from '@/lib/polar';
 import { createServiceClient } from '@/lib/supabase/service';
 import { applyTransition, recordEvent } from '@/domain/subscription';
 import type { Plan, PolarEventType, SubscriptionState } from '@/domain/subscription';
@@ -421,13 +422,22 @@ export const POST = Webhooks({
     const data = payload.data;
     console.log(`order.refunded: customer ${data.customerId}, order ${data.id}`);
 
-    // 환불 발생 → 구독을 즉시 starter로 다운그레이드
     const profile = await findProfile(
       data.customerId as string,
       (data.customer as { email?: string } | undefined)?.email ?? null,
       data.metadata as Record<string, unknown> | null,
     );
     if (!profile) return;
+
+    // Polar에서 활성 구독이 있으면 즉시 취소
+    if (profile.polar_subscription_id) {
+      try {
+        await polar.subscriptions.revoke({ id: profile.polar_subscription_id });
+        console.log(`order.refunded: revoked subscription ${profile.polar_subscription_id}`);
+      } catch (err) {
+        console.error('order.refunded: failed to revoke subscription:', err);
+      }
+    }
 
     const supabase = createServiceClient();
     await supabase
@@ -441,9 +451,41 @@ export const POST = Webhooks({
       .eq('id', profile.id);
 
     console.log(`order.refunded: profile ${profile.id} → starter (expired)`);
+    revalidatePath('/settings/billing');
+    revalidatePath('/home');
   },
 
   onRefundCreated: async (payload) => {
-    console.log(`refund.created: ${payload.data.id}, subscription ${payload.data.subscriptionId}`);
+    const data = payload.data;
+    console.log(`refund.created: ${data.id}, subscription ${data.subscriptionId}`);
+
+    // refund.created에서도 구독 취소 + 다운그레이드
+    const profile = await findProfile(
+      data.customerId as string,
+      null,
+      null,
+    );
+    if (!profile) return;
+
+    if (profile.polar_subscription_id) {
+      try {
+        await polar.subscriptions.revoke({ id: profile.polar_subscription_id });
+      } catch {}
+    }
+
+    const supabase = createServiceClient();
+    await supabase
+      .from('profiles')
+      .update({
+        plan: 'starter',
+        subscription_status: 'expired',
+        cancel_at_period_end: false,
+        current_period_end: null,
+      })
+      .eq('id', profile.id);
+
+    console.log(`refund.created: profile ${profile.id} → starter (expired)`);
+    revalidatePath('/settings/billing');
+    revalidatePath('/home');
   },
 });
